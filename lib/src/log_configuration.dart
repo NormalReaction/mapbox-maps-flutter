@@ -24,9 +24,9 @@ final class LogConfiguration {
     }
     _initialized = true;
 
-    if (bool.fromEnvironment('MAPBOX_LOG_DEBUG', defaultValue: true)) {
+    /*if (bool.fromEnvironment('MAPBOX_LOG_DEBUG', defaultValue: true)) {
       LogConfiguration.registerLogWriterBackend(_DebugLoggingBackend());
-    }
+    }*/
   }
 }
 

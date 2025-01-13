@@ -190,7 +190,7 @@ class _MapWidgetState extends State<MapWidget> {
   late final _MapboxMapsPlatform _mapboxMapsPlatform =
       _MapboxMapsPlatform.instance(_suffix);
   final int _suffix = _suffixesRegistry.getSuffix();
-  late final _MapEvents _events;
+  late _MapEvents _events;
   bool _needsStateUpdate = false;
   MapboxMap? mapboxMap;
   GlobalKey key = GlobalKey();
@@ -307,6 +307,15 @@ class _MapWidgetState extends State<MapWidget> {
   }
 
   Future<void> onPlatformViewCreated(int id) async {
+    if (kIsWeb) {
+      // For web, we need to wait for the map to be loaded
+      await _mapboxMapsPlatform.waitForMapLoad();
+
+    _events = _MapEvents(
+      binaryMessenger: _mapboxMapsPlatform.binaryMessenger,
+      channelSuffix: _suffix.toString());
+    }
+
     final MapboxMap controller = MapboxMap._(
       mapboxMapsPlatform: _mapboxMapsPlatform,
       onMapTapListener: widget.onTapListener,

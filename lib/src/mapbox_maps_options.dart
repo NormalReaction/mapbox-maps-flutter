@@ -2,19 +2,21 @@ part of mapbox_maps_flutter;
 
 /// Class for Mapbox SDK settings management
 final class MapboxOptions {
+  static String accessToken = '';
+
   static _MapboxOptions _options = () {
     LogConfiguration._setupDebugLoggingIfNeeded();
     return _MapboxOptions();
   }();
 
   /// The access token that is used to access resources provided by Mapbox services.
-  static Future<String> getAccessToken() {
-    return _options.getAccessToken();
+  static String getAccessToken() {
+    return accessToken;
   }
 
   /// The access token that is used to access resources provided by Mapbox services.
   static void setAccessToken(String token) {
-    _options.setAccessToken(token);
+    accessToken = token;
   }
 }
 

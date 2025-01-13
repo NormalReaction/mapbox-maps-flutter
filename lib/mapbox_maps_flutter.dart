@@ -11,6 +11,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
 import 'package:turf/turf.dart' as turf;
+import 'dart:html' as html;
+import 'dart:js' as js;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:ui_web' as ui;
 
 export 'package:turf/helpers.dart';
 
@@ -25,6 +29,7 @@ part 'src/map_widget.dart';
 part 'src/mapbox_map.dart';
 part 'src/mapbox_maps_options.dart';
 part 'src/mapbox_maps_platform.dart';
+part 'src/web_binary_messenger.dart';
 part 'src/pigeons/circle_annotation_messenger.dart';
 part 'src/pigeons/point_annotation_messenger.dart';
 part 'src/pigeons/polygon_annotation_messenger.dart';
