@@ -311,9 +311,10 @@ class _MapWidgetState extends State<MapWidget> {
       // For web, we need to wait for the map to be loaded
       await _mapboxMapsPlatform.waitForMapLoad();
 
-    _events = _MapEvents(
-      binaryMessenger: _mapboxMapsPlatform.binaryMessenger,
-      channelSuffix: _suffix.toString());
+      _events = _MapEvents(
+        binaryMessenger: _mapboxMapsPlatform.binaryMessenger,
+        channelSuffix: _suffix.toString()
+      );
     }
 
     final MapboxMap controller = MapboxMap._(

@@ -35,6 +35,20 @@ class _MapboxMapsPlatform {
       OnPlatformViewCreatedCallback onPlatformViewCreated,
       Set<Factory<OneSequenceGestureRecognizer>>? gestureRecognizers,
       {Key? key}) {
+
+    if (kIsWeb) {
+      ui.platformViewRegistry.registerViewFactory(
+        'plugins.flutter.io/mapbox_maps',
+        (int viewId) => createMapboxElement(viewId, creationParams),
+      );
+      
+      return HtmlElementView(
+        key: key,
+        viewType: 'plugins.flutter.io/mapbox_maps',
+        onPlatformViewCreated: onPlatformViewCreated,
+      );
+    }
+
     if (defaultTargetPlatform == TargetPlatform.android) {
       switch (androidHostingMode) {
         case AndroidPlatformViewHostingMode.TLHC_VD:
@@ -88,17 +102,6 @@ class _MapboxMapsPlatform {
         gestureRecognizers: gestureRecognizers,
         creationParams: creationParams,
         creationParamsCodec: const MapInterfaces_PigeonCodec(),
-      );
-    } else if (kIsWeb) {
-      ui.platformViewRegistry.registerViewFactory(
-        'plugins.flutter.io/mapbox_maps',
-        (int viewId) => createMapboxElement(viewId, creationParams),
-      );
-      
-      return HtmlElementView(
-        key: key,
-        viewType: 'plugins.flutter.io/mapbox_maps',
-        onPlatformViewCreated: onPlatformViewCreated,
       );
     }
 

@@ -1,9 +1,17 @@
 part of mapbox_maps_flutter;
 
+enum GestureEvent {
+  click,
+  dragStart,
+  drag,
+  dragEnd
+}
+
 class WebBinaryMessenger implements BinaryMessenger {
   final BinaryMessenger defaultMessenger;
   final js.JsObject mapInstance;
   final MessageCodec<Object?> mapInterfacesCodec = MapInterfaces_PigeonCodec();
+  final MessageCodec<Object?> gesturesCodec = GestureListeners_PigeonCodec();
   final MessageCodec<Object?> settingsCodec = Settings_PigeonCodec();
   final Map<String, MessageHandler> messageHandlers = {};
   // ignore: library_private_types_in_public_api
@@ -24,6 +32,23 @@ class WebBinaryMessenger implements BinaryMessenger {
       if (subscribedEvents.contains(_MapEvent.cameraChanged)) {
         handleCameraChanged();
       }
+    })]);
+
+    // https://docs.mapbox.com/mapbox-gl-js/api/map/#map-events
+    mapInstance.callMethod('on', ['click', js.allowInterop((e) {
+      handleGestures(GestureEvent.click, e);
+    })]);
+
+    mapInstance.callMethod('on', ['dragstart', js.allowInterop((e) {
+      handleGestures(GestureEvent.dragStart, e);
+    })]);
+
+    mapInstance.callMethod('on', ['drag', js.allowInterop((e) {
+      handleGestures(GestureEvent.drag, e);
+    })]);
+
+    mapInstance.callMethod('on', ['dragend', js.allowInterop((e) {
+      handleGestures(GestureEvent.dragEnd, e);
     })]);
   }
 
@@ -56,6 +81,60 @@ class WebBinaryMessenger implements BinaryMessenger {
       
       // Send to the handler
       handler(encodedMethodCall);
+    }
+
+  }
+
+  void handleGestures(GestureEvent gestureEvent, js.JsObject eventData) {
+    String handlerName = '';
+    GestureState gestureState = GestureState.changed;
+    
+    switch (gestureEvent) {
+      case GestureEvent.click:
+        handlerName = 'dev.flutter.pigeon.mapbox_maps_flutter.GestureListener.onTap.0';
+        gestureState = GestureState.changed;
+        break;
+      case GestureEvent.dragStart:
+        handlerName = 'dev.flutter.pigeon.mapbox_maps_flutter.GestureListener.onScroll.0';
+        gestureState = GestureState.started;
+        break;
+      case GestureEvent.drag:
+        handlerName = 'dev.flutter.pigeon.mapbox_maps_flutter.GestureListener.onScroll.0';
+        gestureState = GestureState.changed;
+        break;
+      case GestureEvent.dragEnd:
+        handlerName = 'dev.flutter.pigeon.mapbox_maps_flutter.GestureListener.onScroll.0';
+        gestureState = GestureState.ended;
+        break;
+      default:
+        throw ArgumentError('WebBinaryMessenger does not support gesture event $gestureEvent');
+    }
+
+    final touchPosition;
+    if (eventData['point'] == null) {
+      touchPosition = ScreenCoordinate(x: 0, y: 0);
+    } else {
+      touchPosition = ScreenCoordinate(x: eventData['point']['x'], y: eventData['point']['y']);
+    }
+
+    final point;
+    if (eventData['lngLat'] == null) {
+      point = Point(coordinates: Position(0, 0));
+    } else {
+      point = Point(coordinates: Position(eventData['lngLat']['lng'], eventData['lngLat']['lat']));
+    }
+    MapContentGestureContext gestureContext = MapContentGestureContext(
+      touchPosition: touchPosition,
+      point: point,
+      gestureState: gestureState
+    );
+
+    // Find the handler for the camera events channel
+    final handler = messageHandlers[handlerName];    
+    if (handler != null) {
+      final List<Object?> args = [gestureContext];
+      // Send to the handler
+      handler(gesturesCodec.encodeMessage(args));
     }
   }
 
@@ -114,6 +193,10 @@ class WebBinaryMessenger implements BinaryMessenger {
   {
     if (methodName == 'updateSettings') return settingsCodec;
 
+    if (methodName == 'onTap' ||
+        methodName == 'onLongPress' ||
+        methodName == 'onScroll') return gesturesCodec;
+
     return mapInterfacesCodec;
   }
 
@@ -128,19 +211,18 @@ class WebBinaryMessenger implements BinaryMessenger {
       case 'getCameraState':
         return Future.value(codec.encodeMessage([getCameraState()]));
       case 'addStyleLayer':
-        print("AddStyleLayer: " + arguments.toString());
         final properties = arguments[0] as String;
         final jsArgs = [js.JsObject.jsify(json.decode(properties))];
         final result = mapInstance.callMethod('addLayer', jsArgs);
         return Future.value(codec.encodeMessage(<Object?>[]));
       case 'addStyleImage':
-        print("AddStyleImage: " + arguments.toString());
         final properties = arguments[0] as String;
         final jsArgs = [js.JsObject.jsify(json.decode(properties))];
         final result = mapInstance.callMethod('addImage', jsArgs);
         return Future.value(codec.encodeMessage(<Object?>[])); 
       case 'setCamera':
         final cameraOptions = arguments[0] as CameraOptions;
+        // Only add arguments if they are not null
         final jsArgs = [js.JsObject.jsify({
           'center': [
             cameraOptions.center?.coordinates.lng,
@@ -150,9 +232,32 @@ class WebBinaryMessenger implements BinaryMessenger {
           'bearing': cameraOptions.bearing,
           'pitch': cameraOptions.pitch,
         })];
-        final result = mapInstance.callMethod('setCamera', jsArgs);
+        final result = mapInstance.callMethod('jumpTo', jsArgs);
         return Future.value(codec.encodeMessage(<Object?>[]));
-
+      case 'easeTo':
+        final cameraOptions = arguments[0] as CameraOptions;
+        final animationOptions = arguments[1] as MapAnimationOptions;
+        final Map<String, dynamic> options = {};
+        
+        // Only add center if coordinates are not null
+        if (cameraOptions.center?.coordinates != null) {
+          options['center'] = [
+            cameraOptions.center!.coordinates.lng,
+            cameraOptions.center!.coordinates.lat,
+          ];
+        }
+        
+        // Add other fields only if they're not null
+        if (cameraOptions.zoom != null) options['zoom'] = cameraOptions.zoom;
+        if (cameraOptions.bearing != null) options['bearing'] = cameraOptions.bearing;
+        if (cameraOptions.pitch != null) options['pitch'] = cameraOptions.pitch;
+        if (animationOptions.duration != null) options['duration'] = animationOptions.duration;
+        if (animationOptions.startDelay != null) options['startDelay'] = animationOptions.startDelay;
+  
+        final jsArgs = [js.JsObject.jsify(options)];
+        
+        final result = mapInstance.callMethod('easeTo', jsArgs);
+        return Future.value(codec.encodeMessage(<Object?>[]));
       case 'addStyleSource':
         final sourceId = arguments[0] as String;
         final properties = json.decode(arguments[1] as String);
@@ -268,5 +373,16 @@ class WebBinaryMessenger implements BinaryMessenger {
       messageHandlers[channel] = handler;
     }
     defaultMessenger.setMessageHandler(channel, handler);
+  }
+
+  void debugPrintJsObject(dynamic jsObject, [String prefix = '']) {
+    if (jsObject == null) return;
+    
+    try {
+      final dartObj = dartify(jsObject);
+      print('$prefix${JsonEncoder.withIndent('  ').convert(dartObj)}');
+    } catch (e) {
+      print('$prefix Failed to convert JS object: $e');
+    }
   }
 }
