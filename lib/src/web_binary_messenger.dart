@@ -222,16 +222,22 @@ class WebBinaryMessenger implements BinaryMessenger {
         return Future.value(codec.encodeMessage(<Object?>[])); 
       case 'setCamera':
         final cameraOptions = arguments[0] as CameraOptions;
-        // Only add arguments if they are not null
-        final jsArgs = [js.JsObject.jsify({
-          'center': [
-            cameraOptions.center?.coordinates.lng,
-            cameraOptions.center?.coordinates.lat,
-          ],
-          'zoom': cameraOptions.zoom,
-          'bearing': cameraOptions.bearing,
-          'pitch': cameraOptions.pitch,
-        })];
+        final Map<String, dynamic> options = {};
+        
+        // Only add center if coordinates are not null
+        if (cameraOptions.center?.coordinates != null) {
+          options['center'] = [
+            cameraOptions.center!.coordinates.lng,
+            cameraOptions.center!.coordinates.lat,
+          ];
+        }
+        
+        // Add other fields only if they're not null
+        if (cameraOptions.zoom != null) options['zoom'] = cameraOptions.zoom;
+        if (cameraOptions.bearing != null) options['bearing'] = cameraOptions.bearing;
+        if (cameraOptions.pitch != null) options['pitch'] = cameraOptions.pitch;
+
+        final jsArgs = [js.JsObject.jsify(options)];
         final result = mapInstance.callMethod('jumpTo', jsArgs);
         return Future.value(codec.encodeMessage(<Object?>[]));
       case 'easeTo':
