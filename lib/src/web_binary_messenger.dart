@@ -206,7 +206,7 @@ class WebBinaryMessenger implements BinaryMessenger {
       return methodParts.length >= 5 ? methodParts[5].split('\$')[0] : '';
   }
 
-  Future<ByteData?> callWebMethod(String methodName, List<Object?> arguments, MessageCodec<Object?> codec) {
+  Future<ByteData?> callWebMethod(String methodName, List<Object?> arguments, MessageCodec<Object?> codec) async {
     switch (methodName) {
       case 'getCameraState':
         return Future.value(codec.encodeMessage([getCameraState()]));

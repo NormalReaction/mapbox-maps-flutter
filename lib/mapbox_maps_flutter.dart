@@ -14,8 +14,8 @@ import 'package:meta/meta.dart';
 import 'package:turf/turf.dart' as turf;
 import 'dart:html' as html;
 import 'dart:js' as js;
+import 'dart:js_util';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:js/js_util.dart';
 import 'dart:ui_web' as ui;
 
 export 'package:turf/helpers.dart';
